@@ -1,34 +1,46 @@
 const express = require('express');
 const router = express.Router();
+const knex = require('../db/knex');
 const mysql = require('mysql');
 
-const connection = mysql.createConnection({
-  host: 'localhost',
-  user: 'root',
-  password: 'password',
-  database: 'todo_app'
-});
-
-let todos = [];
-
 router.get('/', function (req, res, next) {
-  res.render('index', {
-    title: 'ToDo App',
-    todos: todos,
-  });
+  const userId = req.session.userid;
+  const isAuth = Boolean(userId);
+  console.log(`isAuth: ${isAuth}`);
+
+  knex("tasks")
+    .select("*")
+    .then(function (results) {
+      res.render('index', {
+        title: 'ToDo App',
+        todos: results,
+      });
+    })
+    .catch(function (err) {
+      console.error(err);
+      res.render('index', {
+        title: 'ToDo App',
+      });
+    });
 });
 
 router.post('/', function (req, res, next) {
-  connection.connect((err) => {
-    if (err) {
-      console.log('error connecting: ' + err.stack);
-      return
-    }
-    console.log('success');
-  });
   const todo = req.body.add;
-  todos.push(todo);
-  res.redirect('/');
+  knex("tasks")
+    .insert({user_id: 1, content: todo})
+    .then(function () {
+      res.redirect('/')
+    })
+    .catch(function (err) {
+      console.error(err);
+      res.render('index', {
+        title: 'ToDo App',
+      });
+    });
 });
+
+router.use('/signup', require('./signup'));
+router.use('/signin', require('./signin'));
+router.use('/logout', require('./logout'));
 
 module.exports = router;
